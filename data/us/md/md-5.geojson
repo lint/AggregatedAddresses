@@ -1,0 +1,9 @@
+{
+"type": "FeatureCollection",
+"name": "md-5",
+"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
+"features": [
+{ "type": "Feature", "properties": { "len": 219510, "sum": 1585168550, "avg": 7221, "min": 1, "max": 36753 }, "geometry": { "type": "Point", "coordinates": [ -79.82056, 38.00971 ] } },
+{ "type": "Feature", "properties": { "len": 4354137, "sum": 24493246618, "avg": 5625, "min": 1, "max": 98250 }, "geometry": { "type": "Point", "coordinates": [ -76.07052, 40.18266 ] } }
+]
+}

@@ -1,0 +1,8 @@
+{
+"type": "FeatureCollection",
+"name": "in-5",
+"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
+"features": [
+{ "type": "Feature", "properties": { "len": 1948842, "sum": 9368865434, "avg": 4807, "min": 1, "max": 99101 }, "geometry": { "type": "Point", "coordinates": [ -88.43067, 37.86924 ] } }
+]
+}

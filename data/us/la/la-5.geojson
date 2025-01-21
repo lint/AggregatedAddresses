@@ -1,0 +1,9 @@
+{
+"type": "FeatureCollection",
+"name": "la-5",
+"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
+"features": [
+{ "type": "Feature", "properties": { "len": 264294, "sum": 883024176, "avg": 3341, "min": 1, "max": 93099 }, "geometry": { "type": "Point", "coordinates": [ -94.37617, 28.99812 ] } },
+{ "type": "Feature", "properties": { "len": 1675659, "sum": 11592743207, "avg": 6918, "min": 1, "max": 99425 }, "geometry": { "type": "Point", "coordinates": [ -90.62615, 31.16953 ] } }
+]
+}

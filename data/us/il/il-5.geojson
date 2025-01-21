@@ -1,0 +1,11 @@
+{
+"type": "FeatureCollection",
+"name": "il-5",
+"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
+"features": [
+{ "type": "Feature", "properties": { "len": 231318, "sum": 587813961, "avg": 2541, "min": 1, "max": 93204 }, "geometry": { "type": "Point", "coordinates": [ -91.846, 37.06501 ] } },
+{ "type": "Feature", "properties": { "len": 231318, "sum": 587813961, "avg": 2541, "min": 1, "max": 93204 }, "geometry": { "type": "Point", "coordinates": [ -91.84593, 41.41099 ] } },
+{ "type": "Feature", "properties": { "len": 3639813, "sum": 14133686403, "avg": 3883, "min": 1, "max": 93204 }, "geometry": { "type": "Point", "coordinates": [ -88.09597, 39.23775 ] } },
+{ "type": "Feature", "properties": { "len": 3276071, "sum": 13367357865, "avg": 4080, "min": 1, "max": 95497 }, "geometry": { "type": "Point", "coordinates": [ -88.09588, 43.5848 ] } }
+]
+}

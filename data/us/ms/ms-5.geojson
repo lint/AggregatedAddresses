@@ -1,0 +1,9 @@
+{
+"type": "FeatureCollection",
+"name": "ms-5",
+"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
+"features": [
+{ "type": "Feature", "properties": { "len": 288192, "sum": 409899966, "avg": 1422, "min": 1, "max": 76303 }, "geometry": { "type": "Point", "coordinates": [ -91.98802, 30.24707 ] } },
+{ "type": "Feature", "properties": { "len": 288193, "sum": 409900101, "avg": 1422, "min": 1, "max": 76303 }, "geometry": { "type": "Point", "coordinates": [ -91.98797, 34.59054 ] } }
+]
+}
