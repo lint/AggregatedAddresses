@@ -1,0 +1,11 @@
+{
+"type": "FeatureCollection",
+"name": "data",
+"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
+"features": [
+{ "type": "Feature", "properties": { "len": 387126, "sum": 1512573587, "avg": 3907, "min": 1, "max": 33855 }, "geometry": { "type": "Point", "coordinates": [ -87.00093, 43.98216 ] } },
+{ "type": "Feature", "properties": { "len": 48814, "sum": 248765554, "avg": 5096, "min": 1, "max": 33855 }, "geometry": { "type": "Point", "coordinates": [ -87.0008, 48.33213 ] } },
+{ "type": "Feature", "properties": { "len": 4325413, "sum": 52404266012, "avg": 12115, "min": 1, "max": 99063 }, "geometry": { "type": "Point", "coordinates": [ -83.25097, 41.80824 ] } },
+{ "type": "Feature", "properties": { "len": 3940817, "sum": 50829179961, "avg": 12898, "min": 1, "max": 98720 }, "geometry": { "type": "Point", "coordinates": [ -83.25087, 46.15675 ] } }
+]
+}

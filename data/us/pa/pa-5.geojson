@@ -1,9 +1,0 @@
-{
-"type": "FeatureCollection",
-"name": "pa-5",
-"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
-"features": [
-{ "type": "Feature", "properties": { "len": 1235967, "sum": 2370400220, "avg": 1917, "min": 1, "max": 81707 }, "geometry": { "type": "Point", "coordinates": [ -80.85277, 39.82435 ] } },
-{ "type": "Feature", "properties": { "len": 3415623, "sum": 5459293938, "avg": 1598, "min": 1, "max": 73335 }, "geometry": { "type": "Point", "coordinates": [ -77.10273, 41.99773 ] } }
-]
-}

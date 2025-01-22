@@ -1,8 +1,0 @@
-{
-"type": "FeatureCollection",
-"name": "ri-5",
-"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
-"features": [
-{ "type": "Feature", "properties": { "len": 394873, "sum": 87743649, "avg": 222, "min": 1, "max": 21222 }, "geometry": { "type": "Point", "coordinates": [ -72.19562, 41.25631 ] } }
-]
-}

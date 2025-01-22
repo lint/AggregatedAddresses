@@ -1,9 +1,0 @@
-{
-"type": "FeatureCollection",
-"name": "wv-5",
-"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
-"features": [
-{ "type": "Feature", "properties": { "len": 676479, "sum": 1119665436, "avg": 1655, "min": 1, "max": 76453 }, "geometry": { "type": "Point", "coordinates": [ -82.97766, 37.29699 ] } },
-{ "type": "Feature", "properties": { "len": 941197, "sum": 1333479004, "avg": 1416, "min": 1, "max": 97777 }, "geometry": { "type": "Point", "coordinates": [ -79.22762, 39.46979 ] } }
-]
-}
