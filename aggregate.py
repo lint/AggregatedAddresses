@@ -20,7 +20,10 @@ with open("us_bounding_boxes.json", 'r') as f:
 
 # return the bounding box for a given state
 def boundsForState(state):
-    return boxesData[state.upper()]
+    if state.upper() in boxesData:
+        return boxesData[state.upper()]
+    else:
+        return [-1.67, -1.93, 164.09, 72.24]
 
 # create an empty hex grid within the given bounds
 def create_hex_grid(bounds, hex_size):
@@ -68,8 +71,6 @@ def processState(data, state, hex_size):
     print("creating hexagons ...")
     # Create hexagonal grid
     # bounds = data.total_bounds
-    # bounds = [-199.60, 2.64, -5.36, 73.95]
-    # bounds = [-80.5, 39, -74.5, 42.5]
     bounds = boundsForState(state)
 
     hexagons = create_hex_grid(bounds, hex_size)
@@ -84,12 +85,13 @@ def processState(data, state, hex_size):
     print("calculating agg funcs ...")
     # Aggregate statistics
     grouped = joined.groupby("index_right").agg(
-        count=("number_int", "count"),
+        len=("number_int", "count"),
         sum=("number_int", "sum"),
-        mean=("number_int", "mean"),
+        avg=("number_int", "mean"),
         min=("number_int", "min"),
         max=("number_int", "max"),
-        mode=("number_int", "mode")
+        std=("number_int", lambda x: round(pd.Series.std(x), 2)),
+        mod=("number_int", lambda x: pd.Series.mode(x).mean())
     ).reset_index()
 
     print("cleaning output data ...")
@@ -111,17 +113,14 @@ def processState(data, state, hex_size):
     result = hex_grid.merge(grouped, left_on="index", right_on="index_right", how="left")
 
     # Remove hexbins with no data points
-    result = result[result["count"].notna() & (result["count"] > 0)]
+    result = result[result["len"].notna() & (result["len"] > 0)]
 
     # Remove unnecessary columns
     result = result.drop(columns=["index", "index_right"])
 
     # Convert selected columns to integers
-    columns_to_convert = ["count", "sum", "min", "max", 'mean', 'mode']
+    columns_to_convert = ["len", "sum", "min", "max", 'avg', 'mod']
     result[columns_to_convert] = result[columns_to_convert].fillna(0).astype(int)
-
-    # Rename columns
-    result = result.rename(columns={'count': 'len', 'mean': 'avg'})
 
     # Reduce precision of coordinates
     result.geometry = shapely.set_precision(result.geometry, grid_size=0.00001)
@@ -129,7 +128,7 @@ def processState(data, state, hex_size):
     print("writing to file ...")
 
     # Make output directories
-    output_dir_path = os.path.join(data_out_dir, f"res-{hex_size}/us/{state}")
+    output_dir_path = os.path.join(data_out_dir, f"{hex_size}/us/{state}")
     os.makedirs(output_dir_path, exist_ok=True)
 
     # Export to GeoJSON
@@ -154,7 +153,7 @@ def processUSA():
 
     for state in states:
         # Load GeoJSON data
-        geofeather_file = f'{data_in_dir}/us/{state}.feather'
+        geofeather_file = f'{data_feather_dir}/us/{state}/{state}.feather'
         print("loading data ...")
         # data = gpd.read_file(geojson_file)
         data = gpd.read_feather(geofeather_file)
@@ -300,5 +299,5 @@ if __name__ == '__main__':
         shutil.rmtree(data_out_dir)
     os.mkdir(data_out_dir)
 
-    preprocess(['us'])
-    # processUSA()
+    # preprocess(['us'])
+    processUSA()
