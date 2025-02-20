@@ -8,6 +8,7 @@ from shapely.affinity import translate
 from shapely.geometry import mapping
 import json
 import os
+from concurrent.futures import ThreadPoolExecutor
 
 # define data directories
 data_in_dir = 'in'
@@ -42,7 +43,7 @@ def create_hex_grid(bounds, hex_size):
     for i, x in enumerate(x_coords):
         y_coords = y_coords_even if i % 2 == 0 else y_coords_odd
         centers.extend([(x, y) for y in y_coords])
-    print("len(centers):", len(centers))
+    # print("len(centers):", len(centers))
 
     # Vectorized creation of hexagons
     hexagons = [
@@ -65,111 +66,105 @@ def create_hex_grid(bounds, hex_size):
     return hexagons
 
 # process the geo data of a given us state
-def processState(data, state, hex_size):
-    print(f"processing state: {state}, hexSize: {hex_size}")
+def processState(state):
+    
+    sizes = [0.01, 0.05, 0.1, 0.5, 1]
 
-    print("creating hexagons ...")
+    # Load state data file
+    print(f"loading data ... state: {state}")
+    geofeather_file = f'{data_feather_dir}/us/{state}/{state}.feather'
+    data = gpd.read_feather(geofeather_file)
+    data['number_int'] = data['number'].apply(pd.to_numeric, errors='coerce')
+    data.dropna(subset=['number_int'])
+    data = data.set_geometry("geometry")
+
+    # print("creating hexagons ...")
     # Create hexagonal grid
     # bounds = data.total_bounds
     bounds = boundsForState(state)
 
-    hexagons = create_hex_grid(bounds, hex_size)
-    print("creating hex grid ...")
-    hex_grid = gpd.GeoDataFrame(geometry=hexagons, crs=data.crs)
+    for hex_size in sizes:
+        print(f"processing state: {state}, hex_size: {hex_size}")
 
-    print("assigning points to hexagons ...")
-    # Spatial join: assign points to hexagons
-    data = data.set_geometry("geometry")
-    joined = gpd.sjoin(data, hex_grid, how="left", predicate="within")
+        hexagons = create_hex_grid(bounds, hex_size)
+        # print("creating hex grid ...")
+        hex_grid = gpd.GeoDataFrame(geometry=hexagons, crs=data.crs)
 
-    print("calculating agg funcs ...")
-    # Aggregate statistics
-    grouped = joined.groupby("index_right").agg(
-        len=("number_int", "count"),
-        sum=("number_int", "sum"),
-        avg=("number_int", "mean"),
-        min=("number_int", "min"),
-        max=("number_int", "max"),
-        std=("number_int", lambda x: round(pd.Series.std(x), 2)),
-        mod=("number_int", lambda x: pd.Series.mode(x).mean())
-    ).reset_index()
+        # print("assigning points to hexagons ...")
+        # Spatial join: assign points to hexagons
 
-    print("cleaning output data ...")
+        joined = gpd.sjoin(data, hex_grid, how="left", predicate="within")
 
-    # Reproject to a projected CRS
-    projected_crs = "EPSG:3857"  # Web Mercator
-    hex_grid = hex_grid.to_crs(projected_crs)
+        # print("calculating agg funcs ...")
+        # Aggregate statistics
+        grouped = joined.groupby("index_right").agg(
+            len=("number_int", "count"),
+            sum=("number_int", "sum"),
+            avg=("number_int", "mean"),
+            min=("number_int", "min"),
+            max=("number_int", "max"),
+            std=("number_int", lambda x: round(pd.Series.std(x), 2)),
+            mod=("number_int", lambda x: pd.Series.mode(x).mean())
+        ).reset_index()
 
-    # Reset index to create 'index' column for merging
-    hex_grid = hex_grid.reset_index(drop=False)
+        # print("cleaning output data ...")
 
-    # Calculate centroids
-    hex_grid["geometry"] = hex_grid["geometry"].centroid
+        # Reproject to a projected CRS
+        projected_crs = "EPSG:3857"  # Web Mercator
+        hex_grid = hex_grid.to_crs(projected_crs)
 
-    # Reproject back to original CRS
-    hex_grid = hex_grid.to_crs(data.crs)
+        # Reset index to create 'index' column for merging
+        hex_grid = hex_grid.reset_index(drop=False)
 
-    # Merge back with grouped statistics
-    result = hex_grid.merge(grouped, left_on="index", right_on="index_right", how="left")
+        # Calculate centroids
+        hex_grid["geometry"] = hex_grid["geometry"].centroid
 
-    # Remove hexbins with no data points
-    result = result[result["len"].notna() & (result["len"] > 0)]
+        # Reproject back to original CRS
+        hex_grid = hex_grid.to_crs(data.crs)
 
-    # Remove unnecessary columns
-    result = result.drop(columns=["index", "index_right"])
+        # Merge back with grouped statistics
+        result = hex_grid.merge(grouped, left_on="index", right_on="index_right", how="left")
 
-    # Convert selected columns to integers
-    columns_to_convert = ["len", "sum", "min", "max", 'avg', 'mod']
-    result[columns_to_convert] = result[columns_to_convert].fillna(0).astype(int)
+        # Remove hexbins with no data points
+        result = result[result["len"].notna() & (result["len"] > 0)]
 
-    # Reduce precision of coordinates
-    result.geometry = shapely.set_precision(result.geometry, grid_size=0.00001)
+        # Remove unnecessary columns
+        result = result.drop(columns=["index", "index_right"])
 
-    print("writing to file ...")
+        # Convert selected columns to integers
+        columns_to_convert = ["len", "sum", "min", "max", 'avg', 'mod']
+        result[columns_to_convert] = result[columns_to_convert].fillna(0).astype(int)
 
-    # Make output directories
-    output_dir_path = os.path.join(data_out_dir, f"{hex_size}/us/{state}")
-    os.makedirs(output_dir_path, exist_ok=True)
+        # Reduce precision of coordinates
+        result.geometry = shapely.set_precision(result.geometry, grid_size=0.00001)
 
-    # Export to GeoJSON
-    result.to_file(f"{output_dir_path}/data.geojson", driver="GeoJSON")
 
-    # Export to NDJSON (each feature on a new line)
-    # with open("output.geojson", "w") as f:
-    #     for _, row in result.iterrows():
-    #         feature = {
-    #             "type": "Feature",
-    #             "geometry": mapping(row.geometry),
-    #             "properties": row.drop("geometry").to_dict()
-    #         }
-    #         f.write(json.dumps(feature) + "\n")
+        # Make output directories
+        output_dir_path = os.path.join(data_out_dir, f"{hex_size}/us/{state}")
+        os.makedirs(output_dir_path, exist_ok=True)
+
+        # Export to GeoJSON
+        output_file_path = f"{output_dir_path}/data.geojson"
+        print(f"writing to file ... '{output_file_path}'")
+        result.to_file(output_file_path, driver="GeoJSON")
+
+        # Export to NDJSON (each feature on a new line)
+        # with open("output.geojson", "w") as f:
+        #     for _, row in result.iterrows():
+        #         feature = {
+        #             "type": "Feature",
+        #             "geometry": mapping(row.geometry),
+        #             "properties": row.drop("geometry").to_dict()
+        #         }
+        #         f.write(json.dumps(feature) + "\n")
 
 
 
 def processUSA():
     states = ['pr', 'vt', 'ak', 'va', 'sd', 'sc', 'ut', 'ga', 'ms', 'mt', 'mo', 'ma', 'ky', 'al', 'nh', 'mn', 'mi', 'ok', 'in', 'co', 'ca', 'ia', 'ct', 'fl', 'wv', 'ri', 'wy', 'tx', 'pa', 'nc', 'nd', 'nm', 'nj', 'me', 'ar', 'nv', 'dc', 'md', 'ks', 'ne', 'hi', 'de', 'az', 'ny', 'id', 'oh', 'or', 'il', 'la', 'wi', 'wa', 'tn']
-    sizes = [0.01, 0.05, 0.1, 0.5, 1]
-    # sizes = [5]
 
-    for state in states:
-        # Load GeoJSON data
-        geofeather_file = f'{data_feather_dir}/us/{state}/{state}.feather'
-        print("loading data ...")
-        # data = gpd.read_file(geojson_file)
-        data = gpd.read_feather(geofeather_file)
-        data['number_int'] = data['number'].apply(pd.to_numeric, errors='coerce')
-        data.dropna(subset=['number_int'])
-        # print("loaded data")
-        # print(data)
-        # print(data.total_bounds)
-        for size in sizes:
-            print("\nNEW ", state, size)
-
-            # if os.path.isfile(f"{output_dir_path}/{state}-{hex_size}.geojson"):
-            #     print("skipping ...")
-            #     continue
-
-            processState(data, state, size)
+    with ThreadPoolExecutor(max_workers=4) as executor:
+        executor.map(processState, states)
 
 # conmbine and reduce input data files of a given country
 def preprocessCountry(country):
