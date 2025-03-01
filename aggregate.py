@@ -15,6 +15,8 @@ data_in_dir = 'in'
 data_feather_dir = 'feather'
 data_out_dir = 'data'
 
+states = [ 'ca', 'vt', 'va', 'pr', 'ak', 'sd', 'sc', 'ut', 'ga', 'ms', 'mt', 'mo', 'ma', 'ky', 'al', 'nh', 'mn', 'mi', 'ok', 'in', 'co', 'ia', 'ct', 'fl', 'wv', 'ri', 'wy', 'tx', 'pa', 'nc', 'nd', 'nm', 'nj', 'me', 'ar', 'nv', 'dc', 'md', 'ks', 'ne', 'hi', 'de', 'az', 'ny', 'id', 'oh', 'or', 'il', 'la', 'wi', 'wa', 'tn']
+
 # load bounding boxes for each us state
 with open("us_bounding_boxes.json", 'r') as f:
     boxesData = json.loads(f.read())
@@ -75,7 +77,7 @@ def processState(state):
     geofeather_file = f'{data_feather_dir}/us/{state}/{state}.feather'
     data = gpd.read_feather(geofeather_file)
     data['number_int'] = data['number'].apply(pd.to_numeric, errors='coerce')
-    data.dropna(subset=['number_int'])
+    data = data.dropna(subset=['number_int'])
     data = data.set_geometry("geometry")
 
     # print("creating hexagons ...")
@@ -138,9 +140,8 @@ def processState(state):
         # Reduce precision of coordinates
         result.geometry = shapely.set_precision(result.geometry, grid_size=0.00001)
 
-
         # Make output directories
-        output_dir_path = os.path.join(data_out_dir, f"{hex_size}/us/{state}")
+        output_dir_path = os.path.join(data_out_dir, f"aggregate/{hex_size}/us/{state}")
         os.makedirs(output_dir_path, exist_ok=True)
 
         # Export to GeoJSON
@@ -158,10 +159,65 @@ def processState(state):
         #         }
         #         f.write(json.dumps(feature) + "\n")
 
+def processUsCities():
+    print("processing us cities ...")
+    city_bounds = gpd.read_file('city_boundaries.geojson')
+    city_bounds = city_bounds.sort_values('POP2010', ascending=False).head(50)
+
+    for stateIndex, state in enumerate(states):
+        # Load state data file
+        print(f"[{stateIndex+1}/{len(states)}] loading data ... state: {state}")
+
+        # get cities within the state
+        state_cities = city_bounds.loc[city_bounds['ST'] == state.upper()]
+        if len(state_cities) == 0:
+            continue
+
+        geofeather_file = f'{data_feather_dir}/us/{state}/{state}.feather'
+        data = gpd.read_feather(geofeather_file)
+        data['number_int'] = data['number'].apply(pd.to_numeric, errors='coerce')
+        data.dropna(subset=['number_int'])
+        data = data.set_geometry("geometry")
+
+        # match points to each city and filter columns
+        joined = gpd.sjoin(data, state_cities, how="left", predicate="within")
+        joined = joined.dropna(subset=['index_right'])
+        joined = joined[['number_int', 'geometry', 'NAME']]
+        joined = joined.rename(columns={'number_int': 'number'})
+
+        # Make output directories
+        output_dir_path = os.path.join(data_out_dir, f"us_50_cities/{state}")
+        os.makedirs(output_dir_path, exist_ok=True)
+
+        # iterate over every city and save results
+        cityNames = joined['NAME'].drop_duplicates()
+        for city in cityNames:
+            cityNiceName = city.lower().replace(' ', '_')
+            cityDf = joined.loc[joined['NAME'] == city][['number', 'geometry']]
+            output_file_path = f"{output_dir_path}/{cityNiceName}.geojson"
+            print(f"writing to file ... '{output_file_path}'")
+            cityDf.to_file(output_file_path, driver="GeoJSON")
+
+            # Convert to GeoJSON format
+            geojson_bytes = os.path.getsize(output_file_path)
+            
+            # split file into 100mb chunks
+            if geojson_bytes > 104857600:
+                print(f"File exceeds 100MB, splitting...")
+                chunk_size = len(cityDf) // (geojson_bytes // 104857600 + 1)
+                
+                for i, chunk in enumerate(range(0, len(cityDf), chunk_size)):
+                    chunk_df = cityDf.iloc[chunk:chunk + chunk_size]
+                    chunk_output_path = f"{output_dir_path}/{cityNiceName}_{i+1}.geojson"
+                    if len(chunk_df) <= 1:
+                        continue
+                    print(f"Writing chunk {i+1} to '{chunk_output_path}'")
+                    chunk_df.to_file(chunk_output_path, driver="GeoJSON")
+
+                os.remove(output_file_path)
 
 
 def processUSA():
-    states = ['pr', 'vt', 'ak', 'va', 'sd', 'sc', 'ut', 'ga', 'ms', 'mt', 'mo', 'ma', 'ky', 'al', 'nh', 'mn', 'mi', 'ok', 'in', 'co', 'ca', 'ia', 'ct', 'fl', 'wv', 'ri', 'wy', 'tx', 'pa', 'nc', 'nd', 'nm', 'nj', 'me', 'ar', 'nv', 'dc', 'md', 'ks', 'ne', 'hi', 'de', 'az', 'ny', 'id', 'oh', 'or', 'il', 'la', 'wi', 'wa', 'tn']
 
     with ThreadPoolExecutor(max_workers=4) as executor:
         executor.map(processState, states)
@@ -290,9 +346,10 @@ def preprocess(country_dirs_override=None):
 if __name__ == '__main__':
 
     # reset the output directory
-    if os.path.isdir(data_out_dir):
-        shutil.rmtree(data_out_dir)
-    os.mkdir(data_out_dir)
+    # if os.path.isdir(data_out_dir):
+    #     shutil.rmtree(data_out_dir)
+    # os.mkdir(data_out_dir)
 
     # preprocess(['us'])
-    processUSA()
+    # processUSA()
+    processUsCities()
